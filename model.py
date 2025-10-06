@@ -187,7 +187,7 @@ class CRNN2D_elu(nn.Module):
 
         emb = x
 
-        x = self.softmax(self.linear1(x))
+        # x = self.softmax(self.linear1(x))
 
         return x, emb
 
