@@ -137,7 +137,7 @@ def main(classes_num=20, gid=0, random_state=0, \
     ROOT = CRNN_ROOT.parent
     json_folder = ROOT / 'artist20'
     artist_meta_dir = ROOT / 'artist20' / 'train_val'
-    song_folder = CRNN_ROOT / 'song_data_artist20_origin'   # 原始混音
+    song_folder = ROOT / 'song_data_artist20_origin'   # 原始混音
     # voc_folder  = CRNN_ROOT / 'song_data_artist20_vocal'    # 人聲
     # bgm_folder  = CRNN_ROOT / 'song_data_artist20_accomp'   # 伴奏(伴音)
 
