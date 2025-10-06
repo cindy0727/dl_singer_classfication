@@ -111,7 +111,7 @@ def main(classes_num=20, gid=0, random_state=0, \
     if not os.path.exists(save_folder+'/result/'):
         os.makedirs(save_folder+'/result/')
 
-    epoch_num = 40
+    epoch_num = 22
 
     print('Loading pretrain model ...')
 
