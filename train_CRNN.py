@@ -342,15 +342,18 @@ def main(classes_num=20, gid=0, random_state=0, \
                 batch_h = torch.randn(1, batch_x.size(0), 32).cuda()
                 
                 
-                pred_y, emb = Classifier(batch_x, batch_h)
+                # pred_y, emb = Classifier(batch_x, batch_h)
+                # loss = CELoss(pred_y, batch_y)
+                logits, emb = Classifier(batch_x, batch_h)
+                loss = CELoss(logits, batch_y)
 
                 
-                loss = CELoss(pred_y, batch_y)
+                
                 
                 loss.backward()
                 opt.step()
 
-                all_loss += loss
+                all_loss += loss.item()
         if vocal:
             for step, (batch_x, batch_y) in enumerate(vocal_loader):
                 
@@ -400,21 +403,28 @@ def main(classes_num=20, gid=0, random_state=0, \
             frame_true = []
             frame_pred = []
 
-            for step, (batch_x, batch_y) in enumerate(val_loader):
-                
-                batch_x = batch_x.cuda()
-                batch_y = batch_y.cuda()
-                batch_h = torch.randn(1, batch_x.size(0), 32).cuda()
-                
-                pred_y, emb = Classifier(batch_x, batch_h)
+            with torch.no_grad():
+                print("torch.no_grad")
+                for step, (batch_x, batch_y) in enumerate(val_loader):
+                    
+                    batch_x = batch_x.cuda()
+                    batch_y = batch_y.cuda()
+                    batch_h = torch.randn(1, batch_x.size(0), 32).cuda()
+                    
+                    # pred_y, emb = Classifier(batch_x, batch_h)
+                    # pred_y = pred_y.detach().cpu().numpy()
+                    # batch_y = batch_y.detach().cpu().numpy()
 
-                pred_y = pred_y.detach().cpu().numpy()
-                batch_y = batch_y.detach().cpu().numpy()
+                    # for i in range(len(pred_y)):               
+                    #     frame_true.append(batch_y[i])
+                    #     frame_pred.append(np.argmax(pred_y[i]) )
+                    logits, emb = Classifier(batch_x, batch_h)          # ← logits
+                    pred_idx = logits.argmax(dim=1).cpu().numpy()       # ← 直接對 logits 取 argmax
+                    y_true   = batch_y.cpu().numpy()
 
-                for i in range(len(pred_y)):               
-                    frame_true.append(batch_y[i])
-                    frame_pred.append(np.argmax(pred_y[i]) )
-                
+                    frame_true.extend(y_true.tolist())
+                    frame_pred.extend(pred_idx.tolist())
+
             val_F1 = f1_score(frame_true, frame_pred, average='weighted')
             print('     val F1: %.2f'% val_F1)
             
