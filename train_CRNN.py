@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data as Data
 import numpy as np
-import os,time
+import os,time, json
 import model
 import h5py
 import itertools
@@ -111,7 +111,7 @@ def main(classes_num=20, gid=0, random_state=0, \
     if not os.path.exists(save_folder+'/result/'):
         os.makedirs(save_folder+'/result/')
 
-    epoch_num = 5
+    epoch_num = 3
 
     print('Loading pretrain model ...')
 
@@ -437,6 +437,42 @@ def main(classes_num=20, gid=0, random_state=0, \
 
                 torch.save({'Classifier_state_dict': Classifier.state_dict()
                             }, save_folder+'/model/CRNN2D_elu_model_state_dict_test')
+                # 儲存到雲端
+                RUN_NAME = time.strftime("CRNN_run_%Y%m%d_%H%M%S")
+                CLOUD_DIR = Path('/content/drive/MyDrive/CRNN_runs') / RUN_NAME
+                (CLOUD_DIR / 'model').mkdir(parents=True, exist_ok=True)
+                (CLOUD_DIR / 'result').mkdir(parents=True, exist_ok=True)
+                ckpt_path = CLOUD_DIR / 'model' / 'CRNN2D_elu_model_state_dict_test.pt'
+                torch.save({
+                    'epoch': int(best_epoch),
+                    'best_val_F1': float(best_F1),
+                    'model_name': 'CRNN2D_elu',
+                    'classes_num': int(classes_num),
+                    'flags': {'origin': bool(origin), 'vocal': bool(vocal), 'remix': bool(remix)},
+                    'state_dict': Classifier.state_dict(),
+                    # （可選）一起存 optimizer / scheduler 狀態，之後可無縫續訓
+                    'optimizer': opt.state_dict() if 'opt' in globals() else None,
+                }, str(ckpt_path))
+
+                # 3) 存一份簡單的 meta.json（閱讀與追蹤更方便）
+                meta = {
+                    'best_epoch': int(best_epoch),
+                    'best_val_F1': float(best_F1),
+                    'slice_length': int(slice_length) if 'slice_length' in globals() else None,
+                    'random_state': int(random_state) if 'random_state' in globals() else None,
+                }
+                with open(CLOUD_DIR / 'meta.json', 'w', encoding='utf-8') as f:
+                    json.dump(meta, f, ensure_ascii=False, indent=2)
+
+                # （可選）若有 LabelEncoder，順手存起來，推論會用到
+                try:
+                    with open(CLOUD_DIR / 'label_encoder.pkl', 'wb') as f:
+                        pickle.dump(le, f)
+                except Exception as e:
+                    print('[warn] 無法儲存 label encoder：', e)
+
+                print('Saved to:', CLOUD_DIR)
+
 
                 frame_true = []
                 frame_pred = []
