@@ -119,7 +119,7 @@ class CRNN2D_elu(nn.Module):
         super(CRNN2D_elu, self).__init__()
         # input [B, F, T]
         self.elu = nn.ELU()
-        self.softmax = nn.Softmax(dim=1)
+        #self.softmax = nn.Softmax(dim=1)
         
         # 對頻率軸做批次正規化，平衡每個 mel band 的分佈
         self.Bn0 = nn.BatchNorm1d(128)
@@ -187,7 +187,7 @@ class CRNN2D_elu(nn.Module):
 
         emb = x
 
-        # x = self.softmax(self.linear1(x))
+        logits = self.linear1(x)
+        return logits, emb
 
-        return x, emb
 
