@@ -18,6 +18,7 @@ from pathlib import Path
 # === Training 完成後做最終評估（使用最佳 F1 的模型） ===
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
+from collections import defaultdict, Counter
 
 
 class Dataset_4(Data.Dataset):
@@ -115,17 +116,13 @@ def main(classes_num=20, gid=0, random_state=0, \
     if not os.path.exists(save_folder+'/result/'):
         os.makedirs(save_folder+'/result/')
 
-    epoch_num = 3
+    epoch_num = 50
     print('epoch_num: ', epoch_num)
 
     print('=======================')
 
     print('Loading CRNN model ...')
 
-    # Classifier = model.CRNN2D_elu(224,classes_num)
-    # Classifier.float()
-    # Classifier.cuda()
-    # Classifier.train()
 
     if CRNN_model:
         Classifier = model.CRNN2D_elu(224,classes_num)
@@ -142,11 +139,15 @@ def main(classes_num=20, gid=0, random_state=0, \
 
     CRNN_ROOT = Path(__file__).resolve().parent
     ROOT = CRNN_ROOT.parent
-    json_folder = ROOT / 'artist20'
-    artist_meta_dir = ROOT / 'artist20' / 'train_val'
+    json_folder = CRNN_ROOT / 'artist20'
+    artist_meta_dir = CRNN_ROOT / 'artist20' / 'train_val'
     song_folder = CRNN_ROOT / 'song_data_artist20_origin'   # 原始混音
+    
+    
     # voc_folder  = CRNN_ROOT / 'song_data_artist20_vocal'    # 人聲
     # bgm_folder  = CRNN_ROOT / 'song_data_artist20_accomp'   # 伴奏(伴音)
+    # json_folder = ROOT / 'artist20'
+    # artist_meta_dir = ROOT / 'artist20' / 'train_val'
 
     # artist_folder=f'/home/bill317996/189/homes/kevinco27/dataset/artist20_mix'
     # song_folder=f'/home/bill317996/189/homes/kevinco27/ICASSP2020_meledy_extraction/music-artist-classification-crnn/song_data_mix'
@@ -199,26 +200,6 @@ def main(classes_num=20, gid=0, random_state=0, \
         # X：mel spectrom
         # V_train：每段音訊的有效長度（給 RNN 做 pack/pad）
         # mask 或其他輔助特徵（如邊界、拍點資訊）
-        # X_train_list, Y_train_list, S_train_list, V_train_list, B_train_list = utility.slice_songs_da(
-        #     X_train, Y_train, S_train, V_train, B_train, length=slice_length)
-
-        # # 一維 object 陣列：每個元素是一個 2D slice；不會一次分配成巨大 3D
-        # X_train = np.empty(len(X_train_list), dtype=object); X_train[:] = X_train_list
-        # Y_train = np.asarray(Y_train_list)  # label 正常數值陣列即可
-
-        # S_train = np.empty(len(S_train_list), dtype=object); S_train[:] = S_train_list
-        # V_train = np.empty(len(V_train_list), dtype=object); V_train[:] = V_train_list
-        # B_train = np.empty(len(B_train_list), dtype=object); B_train[:] = B_train_list
-
-        # X_val_list, Y_val_list, S_val_list, V_val_list, B_val_list = utility.slice_songs_da(
-        #     X_val, Y_val, S_val, V_val, B_val, length=slice_length)
-        # X_val = np.empty(len(X_val_list), dtype=object); X_val[:] = X_val_list
-        # Y_val = np.asarray(Y_val_list)  # label 正常數值陣列即可
-
-        # S_val = np.empty(len(S_val_list), dtype=object); S_val[:] = S_val_list
-        # V_val = np.empty(len(V_val_list), dtype=object); V_val[:] = V_val_list
-        # B_val = np.empty(len(B_val_list), dtype=object); B_val[:] = B_val_list
-
         X_test, Y_test, S_test, V_test, B_test = utility.slice_songs_da(X_test, Y_test, S_test, V_test, B_test,
                                                      length=slice_length)
         X_test = np.array(X_test, dtype=object)
@@ -301,9 +282,6 @@ def main(classes_num=20, gid=0, random_state=0, \
         test_o_set = Dataset_4(data_tensor=X_test, target_tensor1=Y_test, target_tensor2=S_test, target_tensor3=V_test)
         test_o_loader = Data.DataLoader(dataset=test_o_set, batch_size=bs, shuffle=False)
 
-        # test_v_set = Dataset_3(data_tensor=V_test, target_tensor1=Y_test, target_tensor2=S_test)
-        # test_v_loader = Data.DataLoader(dataset=test_v_set, batch_size=bs, shuffle=False)
-
     #####################################
 
     best_epoch = 0
@@ -347,16 +325,10 @@ def main(classes_num=20, gid=0, random_state=0, \
                 batch_x = batch_x.cuda()
                 batch_y = batch_y.cuda()
                 batch_h = torch.randn(1, batch_x.size(0), 32).cuda()
-                
-                
-                # pred_y, emb = Classifier(batch_x, batch_h)
-                # loss = CELoss(pred_y, batch_y)
+            
                 logits, emb = Classifier(batch_x, batch_h)
                 loss = CELoss(logits, batch_y)
 
-                
-                
-                
                 loss.backward()
                 opt.step()
 
@@ -417,13 +389,6 @@ def main(classes_num=20, gid=0, random_state=0, \
                     batch_y = batch_y.cuda()
                     batch_h = torch.randn(1, batch_x.size(0), 32).cuda()
                     
-                    # pred_y, emb = Classifier(batch_x, batch_h)
-                    # pred_y = pred_y.detach().cpu().numpy()
-                    # batch_y = batch_y.detach().cpu().numpy()
-
-                    # for i in range(len(pred_y)):               
-                    #     frame_true.append(batch_y[i])
-                    #     frame_pred.append(np.argmax(pred_y[i]) )
                     logits, emb = Classifier(batch_x, batch_h)          # ← logits
                     pred_idx = logits.argmax(dim=1).cpu().numpy()       # ← 直接對 logits 取 argmax
                     y_true   = batch_y.cpu().numpy()
@@ -589,6 +554,22 @@ def main(classes_num=20, gid=0, random_state=0, \
                     print('[No test set] Skipping test evaluation (only using validation to pick the best epoch).')
 
     print("training end")
+    # 1) 依出現順序建立歌曲 -> id 對照表
+    uniq_order = {k: i for i, k in enumerate(dict.fromkeys(S_val))}
+    # 2) 轉成與切片一一對應的 sid_val（長度 == len(X_val)）
+    sid_val = np.array([uniq_order[k] for k in S_val], dtype=int)
+
+    # 小檢查
+    assert len(sid_val) == len(X_val)
+    # 每首歌的切片數（可選，用來 debug）
+    nslices_per_song = Counter(sid_val)
+    print('#songs =', len(nslices_per_song), '; total slices =', len(X_val))
+
+    # 確認同一首歌的標籤一致（非常重要）
+    for sid in nslices_per_song.keys():
+        ys = {int(Y_val[i]) for i in range(len(Y_val)) if sid_val[i] == sid}
+        assert len(ys) == 1, f'song {sid} has multiple labels: {ys}'
+    
     if best_ckpt_path is None:
         print("[warn] 尚未產生任何最佳模型（best_ckpt_path is None）。")
     else:
@@ -599,6 +580,10 @@ def main(classes_num=20, gid=0, random_state=0, \
         ckpt = torch.load(best_ckpt_path, map_location=device)
         Classifier.load_state_dict(ckpt['state_dict'])
         Classifier.eval()
+        song_logits_sum = defaultdict(lambda: 0)   # sid -> 累積 logits（tensor 或 numpy）
+        song_counts     = defaultdict(int)         # sid -> 切片數
+        song_true       = {}                       # sid -> 真實標籤(一次)
+
 
         # 逐 batch 推論，統計 top-1 / top-3 與混淆矩陣
         total = 0
@@ -608,64 +593,86 @@ def main(classes_num=20, gid=0, random_state=0, \
         all_pred = []
 
         with torch.no_grad():
-            for step, (batch_x, batch_y) in enumerate(val_loader):
-                batch_x = batch_x.cuda() if device.type == "cuda" else batch_x.to(device)
-                batch_y = batch_y.cuda() if device.type == "cuda" else batch_y.to(device)
+            offset = 0  # 指向 sid_val 的讀取位置
 
-                # 你的 GRU 隱狀態初始化（大小依你的模型定義）
-                batch_h = torch.randn(1, batch_x.size(0), 32, device=device)
+            for batch_x, batch_y in val_loader:
+                batch_x = batch_x.to(device)
+                batch_y = batch_y.to(device)
+                B = batch_y.size(0)
 
-                logits, _ = Classifier(batch_x, batch_h)
+                # 取出對應這個 batch 的歌曲 id（依序對齊）
+                sids = sid_val[offset: offset + B]
+                offset += B
 
-                # Top-1
-                pred1 = logits.argmax(dim=1)
-                top1_correct += (pred1 == batch_y).sum().item()
+                h = torch.randn(1, B, 32, device=device)  # 依你的 GRU 隱層維度
+                logits, _ = Classifier(batch_x, h)        # [B, C]
 
-                # Top-3（若類別數 < 3，自動取可用上限）
-                k = min(3, logits.size(1))
-                topk_idx = torch.topk(logits, k=k, dim=1).indices
-                match_topk = (topk_idx == batch_y.unsqueeze(1)).any(dim=1)
-                top3_correct += match_topk.sum().item()
+                # 累加到各歌曲
+                for i in range(B):
+                    sid = int(sids[i])
+                    logit_i = logits[i].detach().cpu()
+                    song_logits_sum[sid] = logit_i if song_logits_sum[sid] is None else song_logits_sum[sid] + logit_i
+                    song_counts[sid]    += 1
+                    song_true[sid]       = int(batch_y[i].item())
 
-                total += batch_y.size(0)
+        # ===== 歌曲級 Top-1 / Top-3 =====
+        all_true_song, all_pred_song = [], []
+        top1_correct = top3_correct = 0
 
-                all_true.extend(batch_y.detach().cpu().tolist())
-                all_pred.extend(pred1.detach().cpu().tolist())
+        for sid, logit_sum in song_logits_sum.items():
+            mean_logits = logit_sum / song_counts[sid]
+            pred1 = int(mean_logits.argmax().item())
 
-        top1_acc = top1_correct / total if total > 0 else 0.0
-        top3_acc = top3_correct / total if total > 0 else 0.0
+            k = min(3, mean_logits.numel())
+            topk_idx = torch.topk(mean_logits, k=k).indices.numpy().tolist()
+            in_top3 = (song_true[sid] in topk_idx)
 
-        print(f"[Final Eval] Best @ epoch {ckpt.get('epoch')}, "
-            f"Top-1 Acc = {top1_acc:.4f}, Top-3 Acc = {top3_acc:.4f}")
+            all_true_song.append(song_true[sid])
+            all_pred_song.append(pred1)
+            top1_correct += int(pred1 == song_true[sid])
+            top3_correct += int(in_top3)
 
-        # 混淆矩陣（rows=true, cols=pred）
-        labels = list(range(int(classes_num)))  # 你訓練中已有 classes_num
-        cm = confusion_matrix(all_true, all_pred, labels=labels)
-        print("Confusion Matrix (rows=true, cols=pred):")
-        print(cm)
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
-        disp.plot(xticks_rotation='vertical', colorbar=False)
-        plt.tight_layout()
-        plt.show()
+        num_songs = len(song_true)
+        top1_acc_song = top1_correct / num_songs
+        top3_acc_song = top3_correct / num_songs
+        print(f"[Song-level] #songs={num_songs}  Top-1={top1_acc_song:.4f}  Top-3={top3_acc_song:.4f}")
 
-        # # 存成 CSV
-        # if best_cloud_dir is not None:
-        #     cm_csv = best_cloud_dir / 'result' / 'confusion_matrix.csv'
-        #     np.savetxt(str(cm_csv), cm, fmt='%d', delimiter=',')
-        #     print("Confusion matrix CSV saved to:", cm_csv)
+        # 1) 產生 cm（用訓練時的類別順序）
+        labels = list(range(int(classes_num)))
+        
 
-        # # 存成圖（PNG）
-        # try:
-        #     import matplotlib.pyplot as plt
-        #     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
-        #     disp.plot(xticks_rotation='vertical', colorbar=False)
-        #     plt.tight_layout()
-        #     cm_png = (best_cloud_dir / 'result' / 'confusion_matrix.png') if best_cloud_dir is not None else Path('confusion_matrix.png')
-        #     plt.savefig(cm_png, dpi=150)
-        #     plt.close()
-        #     print("Confusion matrix PNG saved to:", cm_png)
-        # except Exception as e:
-        #     print("[warn] 無法繪製/存檔混淆矩陣圖：", e)
+        # 2) 類別名稱（若有 label encoder 就用名字）
+        try:
+            class_names = le.classes_.tolist()
+        except Exception:
+            class_names = [str(i) for i in labels]
+
+        cm = confusion_matrix(all_true_song, all_pred_song, labels=labels)
+        print("sum(cm_song) =", cm.sum())
+
+        # 存成 CSV
+        if best_cloud_dir is not None:
+            cm_csv = best_cloud_dir / 'result' / 'confusion_matrix.csv'
+            np.savetxt(str(cm_csv), cm, fmt='%d', delimiter=',')
+            print("Confusion matrix CSV saved to:", cm_csv)
+
+        # 存成圖（PNG）
+        try:
+            import matplotlib.pyplot as plt
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+            fig, ax = plt.subplots(figsize=(10, 10))
+            # 畫彩色熱圖
+            disp.plot(cmap=plt.cm.Blues, ax=ax, colorbar=True)
+            plt.title("Confusion Matrix (Song-level, Validation Set)")
+            plt.xlabel("Predicted label")
+            plt.ylabel("True label")
+            plt.xticks(rotation=90)   # x 軸標籤旋轉，避免歌手名字重疊
+            cm_png = (best_cloud_dir / 'result' / 'confusion_matrix.png') if best_cloud_dir is not None else Path('confusion_matrix.png')
+            plt.savefig(cm_png, dpi=150)
+            plt.close()
+            print("Confusion matrix PNG saved to:", cm_png)
+        except Exception as e:
+            print("[warn] 無法繪製/存檔混淆矩陣圖：", e)
 
 
 def parser():

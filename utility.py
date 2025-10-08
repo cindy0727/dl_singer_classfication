@@ -741,6 +741,7 @@ def load_dataset_from_json(
             if bgm_song is not None: B_val.append(bgm_song[1])
             if mel_song is not None: M_val.append(mel_song)
 
+    print("train", len(Y_train), "val", len(Y_val))
     # 回傳介面與你原本一致（中段 test 皆為空）
     return (Y_train, X_train, S_train, V_train, B_train, M_train,
             Y_test,  X_test,  S_test,  V_test,  B_test,  M_test,
