@@ -21,28 +21,18 @@ pip install requirements.txt
 python extract_fea.py
 ```
 #### train_CRNN.py
+1. change the path of the folder in train_CRNN.py line 142, 143 and 144
 ```
-usage: train_CRNN.py [-h] [-class CLASSES_NUM] [-gid GPU_INDEX]
-                     [-bs BATCH_SIZE] [-lr LEARN_RATE] [-val VAL_NUM]  
-                     [-stop STOP_NUM] [-rs RANDOM_STATE] [--origin] [--vocal]
-                     [--remix] [--all] [--CRNNx2] [--debug]
-
-optional arguments:
-  -class, classes number (default:20)
-  -gid, gpu index (default:0)
-  -bs, batch size (default:100)
-  -lr, learn rate (default:0.0001)
-  -val, valid per epoch (default:1)
-  -stop, early stop (default:20)
-  -rs random state (default:0)
-  --origin, use original audio to training
-  --vocal, use separated vocal audio to training
-  --remix, use remix audio to training
-  --all, use all of the above data to training
-  --CRNNx2, use CRNNx2 model to training
-  --debug, debug mode
+142: json_folder = # path of artist20
+143: artist_meta_dir = # path of training data and validation data
+144: song_folder = # path of song_data_artist20_origin, same as extract_fea.py line 93
 ```
-#### predict_on_audio.py
+2. in terminal (need to run in Colab)
 ```
-python predict_on_audio.py your_song_path
+python train_CRNN.py --origin
+```
+#### testing.py
+Predicting test data and output json file
+```
+python testing.py
 ```
