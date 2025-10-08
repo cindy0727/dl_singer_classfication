@@ -1,8 +1,9 @@
 # dl singer identification
 
 ### Usage
+Need to run extract_fea.py before running train_CRNN.py
 #### extract_fea.py
-Extracting melspectrograms of artist20 
+Extracting melspectrograms of training data and validation data 
 1. change the path of the folder in extract_fea.py line 73, 76, 77, 83, 85, 91 and 93
 ```
 73: ROOT     = # path of artist20
@@ -32,7 +33,16 @@ python extract_fea.py
 python train_CRNN.py --origin
 ```
 #### testing.py
-Predicting test data and output json file
+1. change the path of the folder in testing.py line 27 and 30
+-Predicting test data and output json file
+-I also uploaded my best model in folder "best model"
+```
+BEST_DIR = # path of best model
+TEST_DIR = # path of testing data
+```
 ```
 python testing.py
 ```
+
+### Reference
+https://github.com/bill317996/Singer-identification-in-artist20.git
