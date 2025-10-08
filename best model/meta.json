@@ -1,0 +1,6 @@
+{
+  "best_epoch": 49,
+  "best_val_F1": 0.575756422048727,
+  "slice_length": null,
+  "random_state": 0
+}
