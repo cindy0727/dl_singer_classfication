@@ -40,6 +40,7 @@ python train_CRNN.py --origin
 BEST_DIR = # path of best model
 TEST_DIR = # path of testing data
 ```
+2. in terminal
 ```
 python testing.py
 ```
