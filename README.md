@@ -1,31 +1,25 @@
-# Singer-identification-in-artist20
-The source code of "Addressing the confounds of accompaniments in singer identification"
-- arxiv: https://arxiv.org/abs/2002.06817
-
-### Dependencies
-
-Requires following packages:
-
-- python 3.6
-- pytorch 1.3
-- crepe 0.0.10
-- librosa 0.7.1
-- dill 0.3.1.1
-- tqdm
-- h5py
-- sklearn
+# dl singer identification
 
 ### Usage
 #### extract_fea.py
 Extracting melspectrograms of artist20 
-1. **Origin**: the original artist20, containing both vocals and accompaniments. `art_dir`: path to artist20
-    
-2. **Vocal**: the vocal-only artist20, separated by [open_unmix](https://github.com/sigsep/open-unmix-pytorch).`art_dir`: path to pure vocals of artist20 (the folder structure should follow the artist20's)
-    
-3. **Accompaniment**: the accompaniment-only artist20 (bass+drums+other), separated by [open_unmix](https://github.com/sigsep/open-unmix-pytorch). `art_dir`: path to pure accompaniments of artis20 (the folder structure should follow the artist20's )
-    
-#### extract_melody.py
-extract the melody of vocals using [crepe](https://github.com/marl/crepe)
+1. change the path of the folder in extract_fea.py line 73, 76, 77, 83, 85, 91 and 93
+```
+73: ROOT     = # path of artist20
+76: art_dir  = # path of training data and validation data
+77: save_dir = # data saving path / 'song_data_artist20_origin'
+
+# 以下照常來說是存取純人聲和純背景音樂的，雖然我只有做原始音檔分析，但還是需要這些路徑才能跑程式
+83: art_dir  = # path of training data and validation data
+85: save_dir = # data saving path / 'song_data_artist20_origin'
+91: art_dir  = # path of training data and validation data
+93: save_dir = # data saving path / 'song_data_artist20_origin'
+```
+2. in terminal
+```
+pip install requirements.txt
+python extract_fea.py
+```
 #### train_CRNN.py
 ```
 usage: train_CRNN.py [-h] [-class CLASSES_NUM] [-gid GPU_INDEX]
