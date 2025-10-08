@@ -79,18 +79,18 @@ if __name__ == '__main__':
     assert art_dir.is_dir(), f'找不到資料夾：{art_dir}'
     create_dataset_parellel(artist_folder=str(art_dir), save_folder=str(save_dir), num_worker=10)
 
-    # 2) 人聲（若有 open-unmix 輸出）
-    art_dir  = ROOT / 'artist20' / 'train_val'
-    # art_dir  = ROOT / 'artist20_open_unmix_vocal' / 'train_val'
-    save_dir = HERE / 'song_data_artist20_vocal'
-    save_dir.mkdir(parents=True, exist_ok=True)
-    assert art_dir.is_dir(), f'找不到資料夾：{art_dir}'
-    create_dataset_parellel(artist_folder=str(art_dir), save_folder=str(save_dir), num_worker=10)
+    # # 2) 人聲（若有 open-unmix 輸出）
+    # art_dir  = ROOT / 'artist20' / 'train_val'
+    # # art_dir  = ROOT / 'artist20_open_unmix_vocal' / 'train_val'
+    # save_dir = HERE / 'song_data_artist20_vocal'
+    # save_dir.mkdir(parents=True, exist_ok=True)
+    # assert art_dir.is_dir(), f'找不到資料夾：{art_dir}'
+    # create_dataset_parellel(artist_folder=str(art_dir), save_folder=str(save_dir), num_worker=10)
 
-    # 3) 伴奏
-    art_dir  = ROOT / 'artist20' / 'train_val'
-    # art_dir  = ROOT / 'artist20_open_unmix_accomp' / 'train_val'
-    save_dir = HERE / 'song_data_artist20_accomp'
-    save_dir.mkdir(parents=True, exist_ok=True)
-    assert art_dir.is_dir(), f'找不到資料夾：{art_dir}'
-    create_dataset_parellel(artist_folder=str(art_dir), save_folder=str(save_dir), num_worker=10)
+    # # 3) 伴奏
+    # art_dir  = ROOT / 'artist20' / 'train_val'
+    # # art_dir  = ROOT / 'artist20_open_unmix_accomp' / 'train_val'
+    # save_dir = HERE / 'song_data_artist20_accomp'
+    # save_dir.mkdir(parents=True, exist_ok=True)
+    # assert art_dir.is_dir(), f'找不到資料夾：{art_dir}'
+    # create_dataset_parellel(artist_folder=str(art_dir), save_folder=str(save_dir), num_worker=10)
