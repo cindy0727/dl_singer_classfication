@@ -15,6 +15,10 @@ import argparse
 import pickle
 import librosa
 from pathlib import Path
+# === Training 完成後做最終評估（使用最佳 F1 的模型） ===
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+
 
 class Dataset_4(Data.Dataset):
     def __init__(self, data_tensor, target_tensor1, target_tensor2, target_tensor3):
@@ -111,13 +115,12 @@ def main(classes_num=20, gid=0, random_state=0, \
     if not os.path.exists(save_folder+'/result/'):
         os.makedirs(save_folder+'/result/')
 
-    epoch_num = 150
-    print('=======================')
+    epoch_num = 3
     print('epoch_num: ', epoch_num)
 
     print('=======================')
 
-    print('Loading pretrain model ...')
+    print('Loading CRNN model ...')
 
     # Classifier = model.CRNN2D_elu(224,classes_num)
     # Classifier.float()
@@ -305,7 +308,8 @@ def main(classes_num=20, gid=0, random_state=0, \
 
     best_epoch = 0
     best_F1 = 0
-
+    best_ckpt_path = None   # 記錄最佳 checkpoint 路徑
+    best_cloud_dir = None   # 記錄最佳雲端資料夾
     #Classifier = model.CRNN2D_elu(224,classes_num)
 
     CELoss = nn.CrossEntropyLoss()
@@ -474,6 +478,8 @@ def main(classes_num=20, gid=0, random_state=0, \
                     print('[warn] 無法儲存 label encoder：', e)
 
                 print('Saved to:', CLOUD_DIR)
+                best_ckpt_path = ckpt_path
+                best_cloud_dir = CLOUD_DIR
 
 
                 frame_true = []
@@ -582,6 +588,85 @@ def main(classes_num=20, gid=0, random_state=0, \
                 else:
                     print('[No test set] Skipping test evaluation (only using validation to pick the best epoch).')
 
+    print("training end")
+    if best_ckpt_path is None:
+        print("[warn] 尚未產生任何最佳模型（best_ckpt_path is None）。")
+    else:
+        print(f"\n[Final Eval] 以最佳模型評估：{best_ckpt_path}")
+
+        # 載入最佳 checkpoint 並灌回模型
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        ckpt = torch.load(best_ckpt_path, map_location=device)
+        Classifier.load_state_dict(ckpt['state_dict'])
+        Classifier.eval()
+
+        # 逐 batch 推論，統計 top-1 / top-3 與混淆矩陣
+        total = 0
+        top1_correct = 0
+        top3_correct = 0
+        all_true = []
+        all_pred = []
+
+        with torch.no_grad():
+            for step, (batch_x, batch_y) in enumerate(val_loader):
+                batch_x = batch_x.cuda() if device.type == "cuda" else batch_x.to(device)
+                batch_y = batch_y.cuda() if device.type == "cuda" else batch_y.to(device)
+
+                # 你的 GRU 隱狀態初始化（大小依你的模型定義）
+                batch_h = torch.randn(1, batch_x.size(0), 32, device=device)
+
+                logits, _ = Classifier(batch_x, batch_h)
+
+                # Top-1
+                pred1 = logits.argmax(dim=1)
+                top1_correct += (pred1 == batch_y).sum().item()
+
+                # Top-3（若類別數 < 3，自動取可用上限）
+                k = min(3, logits.size(1))
+                topk_idx = torch.topk(logits, k=k, dim=1).indices
+                match_topk = (topk_idx == batch_y.unsqueeze(1)).any(dim=1)
+                top3_correct += match_topk.sum().item()
+
+                total += batch_y.size(0)
+
+                all_true.extend(batch_y.detach().cpu().tolist())
+                all_pred.extend(pred1.detach().cpu().tolist())
+
+        top1_acc = top1_correct / total if total > 0 else 0.0
+        top3_acc = top3_correct / total if total > 0 else 0.0
+
+        print(f"[Final Eval] Best @ epoch {ckpt.get('epoch')}, "
+            f"Top-1 Acc = {top1_acc:.4f}, Top-3 Acc = {top3_acc:.4f}")
+
+        # 混淆矩陣（rows=true, cols=pred）
+        labels = list(range(int(classes_num)))  # 你訓練中已有 classes_num
+        cm = confusion_matrix(all_true, all_pred, labels=labels)
+        print("Confusion Matrix (rows=true, cols=pred):")
+        print(cm)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+        disp.plot(xticks_rotation='vertical', colorbar=False)
+        plt.tight_layout()
+        plt.show()
+
+        # # 存成 CSV
+        # if best_cloud_dir is not None:
+        #     cm_csv = best_cloud_dir / 'result' / 'confusion_matrix.csv'
+        #     np.savetxt(str(cm_csv), cm, fmt='%d', delimiter=',')
+        #     print("Confusion matrix CSV saved to:", cm_csv)
+
+        # # 存成圖（PNG）
+        # try:
+        #     import matplotlib.pyplot as plt
+        #     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+        #     disp.plot(xticks_rotation='vertical', colorbar=False)
+        #     plt.tight_layout()
+        #     cm_png = (best_cloud_dir / 'result' / 'confusion_matrix.png') if best_cloud_dir is not None else Path('confusion_matrix.png')
+        #     plt.savefig(cm_png, dpi=150)
+        #     plt.close()
+        #     print("Confusion matrix PNG saved to:", cm_png)
+        # except Exception as e:
+        #     print("[warn] 無法繪製/存檔混淆矩陣圖：", e)
+
 
 def parser():
     
@@ -652,8 +737,6 @@ if __name__ == '__main__':
     
     print('CRNN: ', CRNN_model, ' | CRNNx2: ', CRNNx2_model)
     print('debug: ', debug)
-
-    print('=======================')
 
     with torch.cuda.device(gid):
         main(classes_num=classes_num, gid=gid, random_state=random_state, \
